@@ -42,15 +42,19 @@ class PostMessage(PluginBase):
         return alert
 
     def post_receive(self, alert):
-        if alert.repeat:
+        # don't let us repeat ourselves or
+        # send messages if a blackout period is set
+        if alert.repeat or alert.status == 'blackout':
             return
 
         url = self._get_environment(alert)
         self._post_message(self._prepare_payload(alert), url)
 
     def status_change(self, alert, status, text):
-        #        if status not in ['ack', 'assign']:
-        #            return
+        # don't send messages if a blackout period is set
+        if status == 'blackout':
+            return
+
         url = self._get_environment(alert)
         self._post_message(self._prepare_payload(alert, status, text), url)
 
