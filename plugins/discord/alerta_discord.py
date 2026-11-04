@@ -93,7 +93,7 @@ class PostMessage(PluginBase):
                         "inline": True
                     },
                     {
-                        "name": "Serverity",
+                        "name": "Severity",
                         "value": alert.severity.capitalize() or '',
                         "inline": True
                     },
