@@ -6,19 +6,23 @@ repository should also read [AGENTS.md](AGENTS.md).
 
 ## Workflow
 
-Every change ends with a reviewed merge to `master`. The project has no issue
-tracker set up yet, so the merge request carries the what and the why.
+`discord-plugin` is croit's main branch: everything croit runs lives there.
+`master` holds upstream's code; don't commit to it.
+
+Every change ends with a reviewed merge to `discord-plugin`. The project has
+no issue tracker set up yet, so the merge request carries the what and the
+why.
 
 1. **Discuss** the approach before writing code.
-1. **Branch** off `master` and implement the minimal change. Update the
-   package's `README.md` in the same MR wherever the change makes it wrong or
-   incomplete.
+1. **Branch** off `discord-plugin` and implement the minimal change. Update
+   the package's `README.md` in the same MR wherever the change makes it
+   wrong or incomplete.
 1. **Validate locally** (see below).
 1. **Commit** (see below). Before opening the merge request, and again before
-   the merge, check whether `master` has moved:
-   `git fetch origin && git rev-list --count HEAD..origin/master` counts the
-   commits the branch is behind. If it is behind, rebase onto `origin/master`
-   and validate again.
+   the merge, check whether `discord-plugin` has moved:
+   `git fetch origin && git rev-list --count HEAD..origin/discord-plugin`
+   counts the commits the branch is behind. If it is behind, rebase onto
+   `origin/discord-plugin` and validate again.
 1. **Open the merge request** on GitLab (`origin`). Its title and description
    say what the branch does, every commit's change included, and nothing it
    does not do; check them again after every further commit.
@@ -73,10 +77,10 @@ the text. post_receive() now posts it once, with the updated alert.
 Signed-off-by: Jane Doe <jane.doe@croit.io>
 ```
 
-Each commit message is permanent history on `master`, so write it to stand
-on its own, and squash fixup commits into the commit they fix before the
-merge. Don't start a body line with `#`; git strips such lines when a message
-is edited.
+Each commit message is permanent history on `discord-plugin`, so write it
+to stand on its own, and squash fixup commits into the commit they fix before
+the merge. Don't start a body line with `#`; git strips such lines when a
+message is edited.
 
 Tags (you may use more than one, e.g. `discord: fix: ...`):
 

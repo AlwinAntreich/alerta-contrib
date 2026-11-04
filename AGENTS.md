@@ -16,13 +16,13 @@ Commits, merge requests and testing: [CONTRIBUTING.md](CONTRIBUTING.md).
   checks. Before the MR, list every commit on the branch (subject, why,
   files), show the MR description, and wait for an OK.
 - **These need a fresh, explicit OK each time:** opening an MR, anything on
-  `master`, force-pushes and other history rewrites, tags and releases,
-  `--no-verify`, pushing to the `github` remote, and destructive or privileged
-  actions. A prior OK never carries over, and silence is not consent.
+  `discord-plugin`, force-pushes and other history rewrites, tags and
+  releases, `--no-verify`, pushing to the `github` remote, and destructive or
+  privileged actions. A prior OK never carries over, and silence is not consent.
 - **Agents never merge.** The person who had the MR opened checks it, merges
   it, and is responsible for it.
-- **Never work on `master`.** Branch off it for every change; it only changes
-  through a reviewed MR.
+- **Never work on `discord-plugin` directly.** Branch off it for every change;
+  it only changes through a reviewed MR.
 - **Never commit secrets:** no passwords, API keys, webhook URLs or `.env`
   files in code, config, tests, commit messages or prompts. Tests use fake
   URLs and keys.
@@ -33,6 +33,9 @@ Commits, merge requests and testing: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Rules of this repository
 
+- **`discord-plugin` is croit's main branch:** everything croit runs lives
+  there, and every change branches off it and merges back into it. `master`
+  holds upstream's code; don't commit to it.
 - **Two remotes:** `origin` is croit's GitLab and the one we work on.
   `github` is a fork of the upstream project
   ([alerta/alerta-contrib](https://github.com/alerta/alerta-contrib)). Never
@@ -113,7 +116,7 @@ before `post_receive()` gets the updated one.
 - **Bug fixes start with a failing test;** it may share the fix's commit.
 - **Stage explicit paths,** never `git add -A` or `git add .`: the checkout
   may hold someone else's untracked files.
-- **Rebase conflicts:** if a rebase onto `origin/master` doesn't apply
+- **Rebase conflicts:** if a rebase onto `origin/discord-plugin` doesn't apply
   cleanly, stop; the human resolves it.
 
 ## Done
