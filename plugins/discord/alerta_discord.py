@@ -1,6 +1,7 @@
 import logging
 import os
 import requests
+from flask import g
 
 try:
     from alerta.plugins import app  # alerta >= 5.0
@@ -37,22 +38,39 @@ DEFAULT_SEVERITY_MAP = {
 
 
 class PostMessage(PluginBase):
+    # One message per received alert that is new, changes severity or changes
+    # status, and one per status change made by an action (ack, close, ...).
+    #
+    # While an alert is received, Alerta calls status_change() with the
+    # stored alert (old severity and value) before post_receive() gets the
+    # updated one. status_change() then only records the change, and
+    # post_receive() posts it with the current data.
 
     def pre_receive(self, alert):
+        g.discord_receiving = True
+        g.discord_status_changed = False
         return alert
 
     def post_receive(self, alert):
+        g.discord_receiving = False
+        status_changed = g.pop('discord_status_changed', False)
+
         # don't let us repeat ourselves or
         # send messages if a blackout period is set
-        if alert.repeat or alert.status == 'blackout':
+        if (alert.repeat and not status_changed) or alert.status == 'blackout':
             return
 
         url = self._get_environment(alert)
-        self._post_message(self._prepare_payload(alert), url)
+        self._post_message(self._prepare_payload(alert, text=alert.text), url)
 
     def status_change(self, alert, status, text):
         # don't send messages if a blackout period is set
         if status == 'blackout':
+            return
+
+        # post_receive() sends it with the updated alert
+        if g.get('discord_receiving'):
+            g.discord_status_changed = True
             return
 
         url = self._get_environment(alert)

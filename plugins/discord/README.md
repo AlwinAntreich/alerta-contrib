@@ -21,6 +21,48 @@ discover them.
 Configuration
 -------------
 
+Add `discord` to the list of enabled `PLUGINS` in `alertad.conf` and set
+the webhook URL. Each setting can also be given as an environment variable.
+
+```python
+PLUGINS = ['reject', 'blackout', 'discord']
+DASHBOARD_URL = 'https://alerta.example.com'  # required
+DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/...'
+```
+
+`DISCORD_WEBHOOK_URL` may also be a dictionary that maps an alert's
+environment to a webhook, so each environment posts to its own channel:
+
+```python
+DISCORD_WEBHOOK_URL = {
+    'Production': 'https://discord.com/api/webhooks/...',
+    'Infrastructure': 'https://discord.com/api/webhooks/...',
+}
+```
+
+Optional settings:
+
+| Setting | Default | Description |
+|---|---|---|
+| `DISCORD_CONTENT` | empty | text posted above the embed |
+| `DISCORD_ICON` | Alerta logo | avatar of the message |
+| `ALERTA_USERNAME` | `alerta` | name the message is posted as |
+
+Messages
+--------
+
+The plugin posts one message, with the alert text as its description,
+when:
+
+* a new alert is received,
+* a received alert changes the severity or the status, for example
+  critical (open) to cleared (closed),
+* someone or something changes the status by an action (ack, shelve,
+  close, timeout); the action's text is the description.
+
+Duplicates that change nothing and alerts in a blackout period post no
+message.
+
 References
 ----------
 
