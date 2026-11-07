@@ -8,6 +8,8 @@ from alerta.app import create_app, plugins
 
 WEBHOOK_URL = 'https://discord.com/api/webhooks/0000/XXXX'
 
+RED, ORANGE, GREEN, BLUE = '15548997', '15761935', '3908956', '3447003'
+
 
 class DiscordPluginTestCase(unittest.TestCase):
 
@@ -61,10 +63,13 @@ class DiscordPluginTestCase(unittest.TestCase):
         messages = []
         for call in self.post.call_args_list:
             embed = call.kwargs['json']['embeds'][0]
-            fields = {f['name']: f['value'] for f in embed['fields']}
-            messages.append((embed['description'], fields['Status'],
-                             fields['Severity'], fields['Value']))
+            self.assertNotIn('fields', embed)
+            messages.append((embed['color'], embed['description']))
         return messages
+
+    def _desc(self, text, status, value, extra=''):
+        return (f'{text}\n**Status** {status} · **Resource** {self.resource}'
+                f' · **Value** `{value}`{extra}')
 
     def test_one_message_per_open_and_close(self):
         # A correlated severity change used to post twice: once from
@@ -75,9 +80,9 @@ class DiscordPluginTestCase(unittest.TestCase):
         self._send('critical', 'CRITICAL: container uptime', '00:00:12')
 
         self.assertEqual(self._messages(), [
-            ('CRITICAL: container uptime', 'Open', 'Critical', '00:00:47'),
-            ('CLEARED: container uptime', 'Closed', 'Cleared', '00:05:47'),
-            ('CRITICAL: container uptime', 'Open', 'Critical', '00:00:12'),
+            (RED, self._desc('CRITICAL: container uptime', 'Open', '00:00:47')),
+            (GREEN, self._desc('CLEARED: container uptime', 'Closed', '00:05:47')),
+            (RED, self._desc('CRITICAL: container uptime', 'Open', '00:00:12')),
         ])
 
     def test_escalation_posts_once(self):
@@ -85,8 +90,8 @@ class DiscordPluginTestCase(unittest.TestCase):
         self._send('critical', 'CRITICAL: container uptime', '00:00:47')
 
         self.assertEqual(self._messages(), [
-            ('WARNING: container uptime', 'Open', 'Warning', '00:10:00'),
-            ('CRITICAL: container uptime', 'Open', 'Critical', '00:00:47'),
+            (ORANGE, self._desc('WARNING: container uptime', 'Open', '00:10:00')),
+            (RED, self._desc('CRITICAL: container uptime', 'Open', '00:00:47')),
         ])
 
     def test_duplicate_does_not_post(self):
@@ -101,9 +106,9 @@ class DiscordPluginTestCase(unittest.TestCase):
         self._send('critical', 'CRITICAL: container uptime', '00:00:12')
 
         self.assertEqual(self._messages(), [
-            ('CRITICAL: container uptime', 'Open', 'Critical', '00:00:47'),
-            ('closed by hand', 'Closed', 'Critical', '00:00:47'),
-            ('CRITICAL: container uptime', 'Open', 'Critical', '00:00:12'),
+            (RED, self._desc('CRITICAL: container uptime', 'Open', '00:00:47')),
+            (BLUE, self._desc('closed by hand', 'Closed', '00:00:47')),
+            (RED, self._desc('CRITICAL: container uptime', 'Open', '00:00:12')),
         ])
 
     def test_user_action_posts_once(self):
@@ -111,5 +116,23 @@ class DiscordPluginTestCase(unittest.TestCase):
         self._action(alert_id, 'ack', 'looking into it')
 
         self.assertEqual(self._messages()[1:], [
-            ('looking into it', 'Ack', 'Critical', '00:00:47'),
+            (BLUE, self._desc('looking into it', 'Ack', '00:00:47')),
         ])
+
+    def test_environment_shown_on_request(self):
+        with mock.patch('alerta_discord.DISCORD_SHOW_ENVIRONMENT', True):
+            self._send('critical', 'CRITICAL: container uptime', '00:00:47')
+
+        self.assertEqual(self._messages(), [
+            (RED, self._desc('CRITICAL: container uptime', 'Open', '00:00:47',
+                             '\n**Environment** Production')),
+        ])
+
+    def test_markdown_in_values_is_escaped(self):
+        self.resource = 'mgmt_' + uuid.uuid4().hex[:8] + '_node'
+        self._send('critical', 'CRITICAL: *container* uptime', '00:00:47')
+
+        description = self._messages()[0][1]
+        self.assertIn('CRITICAL: \\*container\\* uptime', description)
+        self.assertIn('**Resource** ' + self.resource.replace('_', '\\_'),
+                      description)

@@ -47,6 +47,7 @@ Optional settings:
 | `DISCORD_CONTENT` | empty | text posted above the embed |
 | `DISCORD_ICON` | Alerta logo | avatar of the message |
 | `ALERTA_USERNAME` | `alerta` | name the message is posted as |
+| `DISCORD_SHOW_ENVIRONMENT` | `False` | add the alert's environment and customer to the message |
 
 Messages
 --------
@@ -62,6 +63,28 @@ when:
 
 Duplicates that change nothing and alerts in a blackout period post no
 message.
+
+A message shows the event as its title, the alert or action text, and
+one line with the status, the resource and the value:
+
+```
+[croit.uptime.croit_container_uptime]
+CRITICAL: container uptime (time of last restart)
+**Status** Open · **Resource** mgmt · **Value** `00:00:47`
+```
+
+With `DISCORD_SHOW_ENVIRONMENT = True`, a second line adds the
+environment and, if the alert has one, the customer.
+
+The colour of the message tells the severity:
+
+| Colour | Severity or status |
+|---|---|
+| red | security, critical, major |
+| orange | minor, warning |
+| green | cleared, normal, ok |
+| blue | status ack, shelved or closed by hand, whatever the severity |
+| grey | informational, debug, trace, indeterminate, unknown |
 
 References
 ----------

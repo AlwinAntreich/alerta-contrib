@@ -21,20 +21,41 @@ DISCORD_ICON = os.environ.get('DISCORD_ICON') or app.config.get(
 DASHBOARD_URL = os.environ.get('DASHBOARD_URL') or app.config['DASHBOARD_URL']
 ALERTA_USERNAME = os.environ.get(
     'ALERTA_USERNAME') or app.config.get('ALERTA_USERNAME', 'alerta')
+DISCORD_SHOW_ENVIRONMENT = True if os.environ.get(
+    'DISCORD_SHOW_ENVIRONMENT', 'False') == 'True' else app.config.get(
+    'DISCORD_SHOW_ENVIRONMENT', False)
 
-# discord wants decimals instead of hex
+# discord wants decimals instead of hex; one colour per level of urgency
 DEFAULT_SEVERITY_MAP = {
-    'security': '0',  # black
-    'critical': '16711680',  # red
-    'major': '16753920',  # orange
-    'minor': '16776960',  # yellow
-    'warning': '16753920',  # orange
-    'informational': '8421504',  # gray
-    'debug': '8421504',  # gray
-    'trace': '8421504',  # gray
-    'cleared': '52224',  # green
-    'ok': '52224'  # green
+    'security': '15548997',  # red
+    'critical': '15548997',  # red
+    'major': '15548997',  # red
+    'minor': '15761935',  # orange
+    'warning': '15761935',  # orange
+    'indeterminate': '9807270',  # grey
+    'informational': '9807270',  # grey
+    'debug': '9807270',  # grey
+    'trace': '9807270',  # grey
+    'unknown': '9807270',  # grey
+    'cleared': '3908956',  # green
+    'normal': '3908956',  # green
+    'ok': '3908956'  # green
 }
+
+# a person acted on the alert: these statuses are blue, whatever the
+# severity, unless the alert is cleared (green)
+STATUS_COLOR_MAP = {
+    'ack': '3447003',  # blue
+    'shelved': '3447003',  # blue
+    'closed': '3447003',  # blue, closed by hand
+}
+
+MARKDOWN_CHARS = '\\*_~|`'
+
+
+def _escape(value):
+    # keep alert data from being read as Discord markdown
+    return ''.join('\\' + c if c in MARKDOWN_CHARS else c for c in value or '')
 
 
 class PostMessage(PluginBase):
@@ -88,12 +109,27 @@ class PostMessage(PluginBase):
     def _prepare_payload(alert, status=None, text=None):
         LOG.debug('Discord: %s, %s, %s', alert, status, text)
 
+        status = status if status else alert.status
+
         color = DEFAULT_SEVERITY_MAP.get(
             alert.severity) or DEFAULT_SEVERITY_MAP.get('informational')
+        if status in STATUS_COLOR_MAP and color != DEFAULT_SEVERITY_MAP['ok']:
+            color = STATUS_COLOR_MAP[status]
 
         title = '[{event}]'.format(event=alert.event)
 
-        status = (status if status else alert.status).capitalize()
+        facts = ['**Status** ' + status.capitalize(),
+                 '**Resource** ' + _escape(alert.resource)]
+        if alert.value:
+            facts.append('**Value** `{}`'.format(alert.value.replace('`', "'")))
+        lines = [_escape(text)] if text else []
+        lines.append(' · '.join(facts))
+
+        if DISCORD_SHOW_ENVIRONMENT:
+            location = ['**Environment** ' + _escape(alert.environment)]
+            if alert.customer:
+                location.append('**Customer** ' + _escape(alert.customer))
+            lines.append(' · '.join(location))
 
         return {
             "avatar_url": DISCORD_ICON,
@@ -102,38 +138,8 @@ class PostMessage(PluginBase):
             "embeds": [{
                 "url": DASHBOARD_URL,
                 "title": title,
-                "description": text,
+                "description": '\n'.join(lines),
                 "color": color,
-                "fields": [
-                    {
-                        "name": "Status",
-                        "value": status,
-                        "inline": True
-                    },
-                    {
-                        "name": "Severity",
-                        "value": alert.severity.capitalize() or '',
-                        "inline": True
-                    },
-                    {
-                        "name": "Value",
-                        "value": alert.value or '',
-                    },
-                    {
-                        "name": "Resource",
-                        "value": alert.resource or '',
-                    },
-                    {
-                        "name": "Environment",
-                        "value": alert.environment or '',
-                        "inline": True
-                    },
-                    {
-                        "name": "Customer",
-                        "value": alert.customer or 'None',
-                        "inline": True
-                    }
-                ],
             }],
         }
 
